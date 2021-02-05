@@ -25,13 +25,6 @@
 //
 //	b.displayEntries();
 //
-//	std::string* result = b.lookup(4);
-//	std::string* result1 = b.lookup(26);
-//	std::string* result2 = b.lookup(1);
-//
-//	std::cout << *result << std::endl;
-//	std::cout << *result1 << std::endl;
-//	std::cout << *result2 << std::endl;
 //
 //
 //}

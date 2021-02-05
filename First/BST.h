@@ -44,16 +44,15 @@ private:
 	static Item* lookupRec(Key, Node*);
 	static void insertRec(Key, Item, Node*&);
 	static void displayEntriesWorker(Node*);
-	static void removeRec(Node*&, int);
+	static void removeRec(Node*&, Key);
 	static void deepDelete(Node*&);
 	static Node* deepCopy(Node*);
-	static int getMinPrivate(Node*);
+	static Node* getMin(Node*);
 	static void rotateRight(Node*&);
 	static void leftRotation(Node*&);
+	static void searchKey(Node*&, Key, Node*&);
 
 };
-
-
 
 template<class Key, class Item>
 BST<Key, Item>::~BST()
@@ -63,6 +62,7 @@ BST<Key, Item>::~BST()
 
 }
 
+//Copy constructor
 template<class Key, class Item>
 BST<Key, Item>::BST(const BST& original)
 {
@@ -70,6 +70,7 @@ BST<Key, Item>::BST(const BST& original)
 	this->root = deepCopy(original.root);
 
 }
+//Move constructor.
 template<class Key, class Item>
 BST<Key, Item>::BST(BST&& currentNode)
 {
@@ -79,6 +80,7 @@ BST<Key, Item>::BST(BST&& currentNode)
 
 }
 
+// Deep copy the tree
 template<class Key, class Item>
 typename BST<Key, Item>::Node* BST<Key, Item>::deepCopy(Node* currentNode)
 {
@@ -95,6 +97,8 @@ typename BST<Key, Item>::Node* BST<Key, Item>::deepCopy(Node* currentNode)
 
 	return newTree;
 }
+
+
 
 template<class Key, class Item>
 void BST<Key, Item>::insert(Key key, Item item)
@@ -118,6 +122,7 @@ void BST<Key, Item>::deepDelete(Node*& currentNode)
 
 }
 
+// Right rotated around pivot node.
 template<class Key, class Item>
 void BST<Key, Item>::rotateRight(Node*& localRoot)
 {
@@ -134,6 +139,7 @@ void BST<Key, Item>::rotateRight(Node*& localRoot)
 	b = localRoot;
 }
 
+// Left rotate around pivot node.
 template<class Key, class Item>
 void BST<Key, Item>::leftRotation(Node*& localRoot)
 {
@@ -151,6 +157,8 @@ void BST<Key, Item>::leftRotation(Node*& localRoot)
 
 }
 
+
+
 template<class Key, class Item>
 void BST<Key, Item>::remove(int key)
 {
@@ -165,80 +173,125 @@ int BST<Key, Item>::getMin()
 
 }
 
+// Remove node.
 template<class Key, class Item>
-void BST<Key, Item>::removeRec(Node*& currentNode, int key)
+void BST<Key, Item>::removeRec(Node*& currentNode, Key key)
 {
+	// pointer to store the parent of the current node
+	Node* parent = nullptr;
 
-	if (currentNode == nullptr)
-	{
-		// Node is not in tree do nothing.
-		std::cout << "Value does not exist" << std::endl;
+	// start with the root node
+	Node* curr = currentNode;
+
+	// search key in the BST and set its parent pointer
+	searchKey(curr, key, parent);
+
+	// return if the key is not found in the tree
+	if (curr == nullptr) {
 		return;
 	}
 
-	if (key < currentNode->key)
+	// Case 1: node to be deleted has no children, i.e., it is a leaf node
+	if (curr->leftChild == nullptr && curr->rightChild == nullptr)
 	{
-		removeRec(currentNode->leftChild, key);
-	}
-	else if (key > currentNode->key)
-	{
-		removeRec(currentNode->rightChild, key);
-	}
-	else
-	{
-		// Case 1: No children.
-		if (currentNode->leftChild == nullptr && currentNode->rightChild == nullptr)
+		// if the node to be deleted is not a root node, then set its
+		// parent left/right child to null
+		if (curr != currentNode)
 		{
-			delete currentNode;
+			if (parent->leftChild == curr) {
+				parent->leftChild = nullptr;
+			}
+			else {
+				parent->rightChild = nullptr;
+			}
+		}
+		// if the tree has only a root node, set it to null
+		else {
 			currentNode = nullptr;
 		}
-		else if (currentNode->rightChild == nullptr)
+
+		// deallocate the memory
+		delete curr;
+		curr = nullptr;
+	}
+
+	// Case 2: node to be deleted has two children
+	else if (curr->leftChild && curr->rightChild)
+	{
+		// find its inorder successor node
+		Node* successor = getMin(curr->rightChild);
+
+		// store successor value
+		Key val = successor->key;
+		Item itemVal = successor->item;
+
+		// recursively delete the successor. Note that the successor
+		// will have at most one child (right child)
+		removeRec(currentNode, successor->key);
+
+		// copy value of the successor to the current node
+		curr->key = val;
+		curr->item = itemVal;
+	}
+
+	// Case 3: node to be deleted has only one child
+	else
+	{
+		// choose a child node
+		Node* child = (curr->leftChild) ? curr->leftChild : curr->rightChild;
+
+		// if the node to be deleted is not a root node, set its parent
+		// to its child
+		if (curr != currentNode)
 		{
-			// Case 2: Left child only
-			currentNode->key = currentNode->leftChild->key;
-			currentNode->item = currentNode->leftChild->item;
-			delete currentNode->leftChild;
-			currentNode->leftChild = nullptr;
+			if (curr == parent->leftChild) {
+				parent->leftChild = child;
+			}
+			else {
+				parent->rightChild = child;
+			}
 		}
-		else if (currentNode->leftChild == nullptr)
-		{
-			// Case 3: right child only
-			currentNode->key = currentNode->rightChild->key;
-			currentNode->item = currentNode->rightChild->item;
-			delete currentNode->rightChild;
-			currentNode->rightChild = nullptr;
+
+		// if the node to be deleted is a root node, then set the root to the child
+		else {
+			currentNode = child;
 		}
-		else
-		{
-			// Case 4: Both right and left.
-			int newKey = getMinPrivate(currentNode);
-			Item* newItem = lookupRec(newKey, currentNode->rightChild);
-			currentNode->key = newKey;
-			currentNode->item = *newItem;
-			std::cout << newKey << std::endl;
-			removeRec(currentNode->rightChild, newKey);
-		}
+
+		// deallocate the memory
+		//free(curr);
+		delete curr;
 	}
 }
 
 template<class Key, class Item>
-int BST<Key, Item>::getMinPrivate(Node* currentNode)
+inline void BST<Key, Item>::searchKey(Node*& currentNode, Key key , Node*& parent)
 {
 
+	// traverse the tree and search for the key
+	while (currentNode != nullptr && currentNode->key != key)
+	{
+		// update the parent to the current node
+		parent = currentNode;
 
-	if (currentNode->rightChild != nullptr)
-	{
-		getMinPrivate(currentNode->rightChild);
-	}
-	else if (currentNode->leftChild != nullptr)
-	{
-		getMinPrivate(currentNode->leftChild);
-	}
-	else
-	{
-		return currentNode->key;
+		// if the given key is less than the current node, go to the left subtree;
+		// otherwise, go to the right subtree
+		if (key < currentNode->key) {
+			currentNode = currentNode->leftChild;
+		}
+		else {
+			currentNode = currentNode->rightChild;
+		}
 	}
 
+}
+
+template<class Key, class Item>
+typename BST<Key, Item>::Node* BST<Key, Item>::getMin(Node* currentNode)
+{
+	while (currentNode->leftChild != nullptr) {
+		currentNode = currentNode->leftChild;
+	}
+	return currentNode;
 }
 
 template<class Key, class Item>
